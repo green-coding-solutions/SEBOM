@@ -1,0 +1,625 @@
+// Please do not change these constants. They should set by the install script
+API_URL = "http://api.green-coding.internal:9142"
+METRICS_URL = "http://metrics.green-coding.internal:9142"
+
+ACTIVATE_SCENARIO_RUNNER = true;
+ACTIVATE_ECO_CI = true;
+ACTIVATE_CARBON_DB = false;
+ACTIVATE_POWER_HOG = false;
+ACTIVATE_AI_OPTIMISATIONS = false;
+
+
+/*
+    The following are configurations to customize de Detailed Metrics / Compare view according to your needs.
+    The components are fixed, but you can rename then and include different metrics if needed
+*/
+
+
+// title and filter function for the top left most chart in the Detailed Metrics / Compare view
+const TOTAL_CHART_BOTTOM_TITLE = 'Total Energy Consumption';
+const TOTAL_CHART_BOTTOM_LABEL = 'Machine Energy';
+// function must return boolean
+const total_chart_bottom_condition = (metric) => {
+    return metric.indexOf('_energy_') !== -1 && metric.endsWith('_machine');
+}
+
+// title and filter function for the top left most chart in the Detailed Metrics / Compare view
+const TOP_BAR_CHART_TITLE = 'Energy Metrics';
+const top_bar_chart_condition = (metric) => {
+    return metric.indexOf('_energy_') !== -1 && (metric.endsWith('_machine') || metric.endsWith('_component'));
+}
+
+// title and filter function for the top right radar chart in the Detailed Metrics / Compare view
+const RADAR_CHART_TITLE = 'General Metrics';
+const radar_chart_condition = (metric) => {
+    return metric.indexOf('cpu_frequency_sysfs_core') == -1 && metric.indexOf('temperature') == -1  && metric.indexOf('energy') == -1 && metric.indexOf('throttling') == -1 && metric.indexOf('power') == -1 && metric.indexOf('carbon') == -1;
+}
+
+// filter function for the CO₂ calculations in the Detailed Metrics
+// please note that this metric must be unique per phase
+const phase_time_metric_condition = (metric) => {
+    return metric == 'phase_time_syscall_system';
+}
+
+const psu_machine_carbon_metric_condition = (metric) => {
+    return metric.startsWith('psu_carbon_') && metric.endsWith('_machine');
+}
+
+const psu_machine_energy_metric_condition = (metric) => {
+    return metric.startsWith('psu_energy_') && metric.endsWith('_machine');
+}
+
+const psu_machine_power_metric_condition = (metric) => {
+    return metric.startsWith('psu_power_') && metric.endsWith('_machine');
+}
+
+const cpu_carbon_metric_condition = (metric) => {
+    return metric.startsWith('cpu_carbon_') && metric.endsWith('_component');
+}
+
+const cpu_energy_metric_condition = (metric) => {
+    return metric.startsWith('cpu_energy_') && metric.endsWith('_component');
+}
+
+const cpu_power_metric_condition = (metric) => {
+    return metric.startsWith('cpu_power_') && metric.endsWith('_component');
+}
+
+const disk_carbon_metric_condition = (metric) => {
+    return metric.startsWith('disk_carbon_') && metric.endsWith('_component');
+}
+
+const disk_energy_metric_condition = (metric) => {
+    return metric.startsWith('disk_energy_') && metric.endsWith('_component');
+}
+
+const disk_power_metric_condition = (metric) => {
+    return metric.startsWith('disk_power_') && metric.endsWith('_component');
+}
+
+const dram_carbon_metric_condition = (metric) => {
+    return metric.startsWith('memory_carbon_') && metric.endsWith('_component');
+}
+
+const dram_energy_metric_condition = (metric) => {
+    return metric.startsWith('memory_energy_') && metric.endsWith('_component');
+}
+
+const dram_power_metric_condition = (metric) => {
+    return metric.startsWith('memory_power_') && metric.endsWith('_component');
+}
+
+const gpu_carbon_metric_condition = (metric) => {
+    return metric.startsWith('gpu_carbon_') && metric.endsWith('_component');
+}
+
+const gpu_energy_metric_condition = (metric) => {
+    return metric.startsWith('gpu_energy_') && metric.endsWith('_component');
+}
+
+const gpu_power_metric_condition = (metric) => {
+    return metric.startsWith('gpu_power_') && metric.endsWith('_component');
+}
+
+const network_carbon_metric_condition = (metric) => {
+    return metric == 'network_carbon_formula_global';
+}
+
+const network_energy_metric_condition = (metric) => {
+    return metric == 'network_energy_formula_global';
+}
+
+const network_io_metric_condition = (metric) => {
+    return metric == 'network_io_cgroup_container';
+}
+
+const network_total_metric_condition = (metric) => {
+    return metric == 'network_total_cgroup_container';
+}
+
+const sci_metric_condition = (metric) => {
+    return metric == 'software_carbon_intensity_global';
+}
+
+const embodied_carbon_share_metric_condition = (metric) => {
+    return metric == 'embodied_carbon_share_machine'
+}
+
+/*
+    Here you can define the ordering of the information cards shown in the detail view
+    You can also remove some if you want or change the icon. The name will be changed when the values are written
+    detail name defined in METRIC_MAPPINGS
+*/
+const HARDWARECARDS = [
+    { key: 'cpu', name: 'CPU', icon: 'microchip',  variable:true },
+    { key: 'gpu', name: 'GPU', icon: 'camera retro',  variable:true  },
+    { key: 'dram', name: 'DRAM', icon: 'memory',  variable:true },
+    { key: 'disk', name: 'Disk', icon: 'hdd',  variable:true  },
+    { key: 'machine', name: 'Machine', icon: 'server',  variable:true },
+];
+
+const EXTRACARDS = [
+    { key: 'runtime', name: 'Phase Duration', icon: 'hourglass half', variable:false },
+    { key: 'network-data', name: 'Data Transferred', icon: 'exchange', variable:false },
+    { key: 'network-traffic', name: 'Network', icon: 'sitemap', variable:false },
+    { key: 'embodied-carbon', name: 'Machine CO₂ (embodied)', icon: 'industry', variable:false },
+    { key: 'sci', name: 'SCI', icon: 'leaf', variable:false },
+];
+
+/*
+    Here you can statically define the badges that shall be shown in the timeline view
+    although this could also be done dynamically it would be a slightly more heavy lifting for the database and only reflect the latest run.
+    This gives you a more fixed picture of what you want to show for the user and does not always change if you try out some configurations in your machine setups
+*/
+const DEFAULT_ENERGY_TIMELINE_BADGE_METRICS = [
+    // ['cpu_energy_rapl_msr_component','Package_0'], // uncomment if you want RAPL CPU energy in timeline overview
+    // ['memory_energy_rapl_msr_component','Package_0'], // uncomment if you want RAPL DRAM energy in timeline overview
+    // ['network_energy_formula_global','[FORMULA]'], // uncomment if you want network in timeline overview
+    ['psu_energy_ac_mcp_machine','[MACHINE]'],
+    // ['software_carbon_intensity_global','[SYSTEM]'] // uncomment if you want SCI as badge in timeline overview
+]
+
+
+/*
+    The metric mapping define "nice names" for the metrics.
+
+    If you feel that they should be called differently or want to translate them to your local language feel free to change them. Otherwise there is typically no need to change this section.
+*/
+
+METRIC_MAPPINGS = {
+    "disk_total_bytesread_powermetrics_vm": {
+        "clean_name": "Disk Total (Read)",
+        "source": "powermetrics",
+        "explanation": "Disk Total bytes read"
+    },
+    "disk_total_byteswritten_powermetrics_vm": {
+        "clean_name": "Disk Total (Write)",
+        "source": "powermetrics",
+        "explanation": "Disk total bytes written"
+    },
+    "disk_used_statvfs_system": {
+        "clean_name": "Disk Usage",
+        "source": "statvfs syscall",
+        "explanation": "Disk used space of the root filesystem via statvfs syscall"
+    },
+    "disk_io_read_procfs_system": {
+        "clean_name": "Disk I/O (Read)",
+        "source": "procfs",
+        "explanation": "Disk bytes read for whole system via procfs"
+    },
+    "disk_io_write_procfs_system": {
+        "clean_name": "Disk I/O (Write)",
+        "source": "procfs",
+        "explanation": "Disk bytes written for whole system via procfs"
+    },
+    "disk_io_cgroup_container": {
+        "clean_name": "Disk I/O",
+        "source": "cgroup",
+        "explanation": "Disk I/O per container via cgroup"
+    },
+    "disk_io_cgroup_system": {
+        "clean_name": "Disk I/O",
+        "source": "cgroup",
+        "explanation": "Disk I/O for system cgroup"
+    },
+    "disk_total_cgroup_system": {
+        "clean_name": "Disk I/O",
+        "source": "cgroup",
+        "explanation": "Disk I/O Totals accumulated for system cgroup"
+    },
+    "disk_total_cgroup_container": {
+        "clean_name": "Disk Data",
+        "source": "procfs",
+        "explanation": "Disk I/O Totals accumulated per container via cgroup"
+    },
+    "disk_total_read_procfs_system": {
+        "clean_name": "Disk Data (Read)",
+        "source": "procfs",
+        "explanation": "Disk read bytes totals for whole system accumulated via procfs"
+    },
+    "disk_total_write_procfs_system": {
+        "clean_name": "Disk Data (Write)",
+        "source": "procfs",
+        "explanation": "Disk written bytes totals for whole system accumulated via procfs"
+    },
+    "psu_energy_cgroup_container": {
+        "clean_name": "Container Energy",
+        "source": "estimation",
+        "explanation": "Container energy estimated via CPU-% share"
+    },
+    "psu_energy_cgroup_slice": {
+        "clean_name": "Container Energy (+Baseline-Share)",
+        "source": "estimation",
+        "explanation": "Container energy estimated via CPU-% share (incl. idle)"
+    },
+    "psu_power_cgroup_container": {
+        "clean_name": "Container Power",
+        "source": "estimation",
+        "explanation": "Container power estimated via CPU-% share"
+    },
+    "psu_power_cgroup_slice": {
+        "clean_name": "Container Power (+Baseline-Share)",
+        "source": "estimation",
+        "explanation": "Container power estimated via CPU-% share incl. Idle"
+    },
+    "psu_carbon_dc_rapl_msr_machine": {
+        "clean_name": "Machine CO₂ (operational)",
+        "source": "Formula (RAPL)",
+        "explanation": "Machine operational CO₂ calculated by formula via RAPL PSYS Domain"
+    },
+    "psu_energy_dc_rapl_msr_machine": {
+        "clean_name": "Machine Energy",
+        "source": "RAPL",
+        "explanation": "Full machine energy (DC) as reported by RAPL PSYS Domain"
+    },
+    "psu_power_dc_rapl_msr_machine": {
+        "clean_name": "Machine Power",
+        "source": "RAPL",
+        "explanation": "Full machine power (DC) as reported by RAPL PSYS Domain"
+    },
+    "psu_carbon_ac_mcp_machine": {
+        "clean_name": "Machine CO₂ (operational)",
+        "source": "Formula (mcp)",
+        "explanation": "Machine operational CO₂ calculated by formula via mcp"
+    },
+    "psu_energy_ac_mcp_machine": {
+        "clean_name": "Machine Energy",
+        "source": "mcp",
+        "explanation": "Full machine energy (AC) as reported by mcp"
+    },
+    "psu_power_ac_mcp_machine": {
+        "clean_name": "Machine Power",
+        "source": "mcp",
+        "explanation": "Full machine power (AC) as reported by mcp"
+    },
+    "embodied_carbon_share_machine": {
+        "clean_name": "Machine CO₂ (embodied)",
+        "source": "Formula",
+        "explanation": "Embodied carbon attributed by time share of the life-span and total embodied carbon"
+    },
+    "software_carbon_intensity_global": {
+        "clean_name": "SCI",
+        "source": "Formula",
+        "explanation": "SCI metric by the Green Software Foundation"
+    },
+    "phase_time_syscall_system": {
+        "clean_name": "Phase Duration",
+        "source": "Syscall",
+        "explanation": "Duration of the phase measured by GMT through a syscall"
+    },
+    "psu_carbon_ac_ipmi_machine": {
+        "clean_name": "Machine CO₂ (operational)",
+        "source": "Formula (IPMI)",
+        "explanation": "Machine operational CO₂ calculated by formula via IPMI measurement"
+    },
+    "psu_carbon_dc_picolog_mainboard": {
+        "clean_name": "Machine CO₂ (operational)",
+        "source": "Formula (PicoLog)",
+        "explanation": "Machine operational CO₂ calculated by formula via PicoLog HRDL ADC-24 measurement"
+    },
+    "psu_carbon_ac_powerspy2_machine": {
+        "clean_name": "Machine CO₂ (operational)",
+        "source": "Formula (PowerSpy2)",
+        "explanation": "Machine operational CO₂ calculated by formula via PowerSpy2 measurement"
+    },
+    "psu_carbon_ac_xgboost_machine": {
+        "clean_name": "Machine CO₂ (operational)",
+        "source": "Formula (XGBoost)",
+        "explanation": "Machine operational CO₂ calculated by formula via XGBoost estimation"
+    },
+    "network_energy_formula_global": {
+        "clean_name": "Network Transmission",
+        "source": "Formula",
+        "explanation": "Estimated external energy cost for network infrastructure."
+    },
+    "network_power_formula_global": {
+        "clean_name": "Network Transmission",
+        "source": "Formula",
+        "explanation": "Estimated external energy cost for network infrastructure."
+    },
+    "network_carbon_formula_global": {
+        "clean_name": "Network Transmission CO₂",
+        "source": "Formula",
+        "explanation": "Estimated external CO₂ cost for network infrastructure."
+    },
+     "lmsensors_temperature_component": {
+        "clean_name": "CPU Temperature",
+        "source": "lm-sensors",
+        "explanation": "CPU Temperature as reported by lm-sensors"
+    },
+    "lmsensors_fan_component": {
+        "clean_name": "Fan Speed",
+        "source": "lm-sensors",
+        "explanation": "Fan speed as reported by lm-sensors"
+    },
+    "psu_energy_ac_powerspy2_machine": {
+        "clean_name": "Machine Energy",
+        "source": "PowerSpy2",
+        "explanation": "Full machine energy (AC) as reported by PowerSpy2"
+    },
+    "psu_power_ac_powerspy2_machine": {
+        "clean_name": "Machine Power",
+        "source": "PowerSpy2",
+        "explanation": "Full machine power (AC) as reported by PowerSpy2"
+    },
+    "psu_energy_ac_xgboost_machine": {
+        "clean_name": "Machine Energy",
+        "source": "XGBoost",
+        "explanation": "Full machine energy (AC) as estimated by XGBoost model"
+    },
+    "psu_power_ac_xgboost_machine": {
+        "clean_name": "Machine Power",
+        "source": "XGBoost",
+        "explanation": "Full machine power (AC) as estimated by XGBoost model"
+    },
+    "psu_energy_ac_ipmi_machine": {
+        "clean_name": "Machine Energy",
+        "source": "IPMI",
+        "explanation": "Full machine energy (AC) as reported by IPMI"
+    },
+    "psu_power_ac_ipmi_machine": {
+        "clean_name": "Machine Power",
+        "source": "IPMI",
+        "explanation": "Full machine power (AC) as reported by IPMI"
+    },
+    "psu_energy_dc_picolog_mainboard": {
+        "clean_name": "Machine Energy",
+        "source": "PicoLog",
+        "explanation": "Full machine energy (DC) as reported by PicoLog HRDL ADC-24"
+    },
+    "psu_power_dc_picolog_mainboard": {
+        "clean_name": "Machine Power",
+        "source": "Picolog",
+        "explanation": "Full machine power (DC) as reported by PicoLog HRDL ADC-24"
+    },
+    "cpu_frequency_sysfs_core": {
+        "clean_name": "CPU Frequency",
+        "source": "sysfs",
+        "explanation": "CPU Frequency per core as reported by sysfs"
+    },
+    "cpu_throttling_thermal_msr_component": {
+        "clean_name": "CPU Throttling (Thermal)",
+        "source": "msr",
+        "explanation": "Indicator for CPU throttling due to thermal capping"
+    },
+    "cpu_throttling_power_msr_component": {
+        "clean_name": "CPU Throttling (Power)",
+        "source": "msr",
+        "explanation": "Indicator for CPU throttling due to power capping"
+    },
+    "ane_power_powermetrics_component": {
+        "clean_name": "ANE Power",
+        "source": "powermetrics",
+        "explanation": "Apple M-Series Neural Engine Power"
+    },
+    "ane_energy_powermetrics_component": {
+        "clean_name": "ANE Energy",
+        "source": "powermetrics",
+        "explanation": "Apple M-Series Neural Engine Energy"
+    },
+    "ane_carbon_powermetrics_component": {
+        "clean_name": "ANE CO₂ (operational)",
+        "source": "Formula (powermetrics)",
+        "explanation": "Apple M-Series Neural Engine operational CO₂ calculated by formula via powermetrics"
+    },
+    "gpu_power_powermetrics_component": {
+        "clean_name": "GPU Power",
+        "source": "powermetrics",
+        "explanation": "Apple M-Series GPU / Intel GPU"
+    },
+    "gpu_energy_powermetrics_component": {
+        "clean_name": "GPU Energy",
+        "source": "powermetrics",
+        "explanation": "Apple M-Series GPU / Intel GPU"
+    },
+    "gpu_carbon_powermetrics_component": {
+        "clean_name": "GPU CO₂ (operational)",
+        "source": "Formula (powermetrics)",
+        "explanation": "Apple M-Series GPU / Intel GPU operational CO₂ calculated by formula via powermetrics"
+    },
+    "cores_power_powermetrics_component": {
+        "clean_name": "CPU Cores Power",
+        "source": "powermetrics",
+        "explanation": "Power of the CPU cores (M-Series) only without GPU, ANE, GPU, DRAM etc."
+    },
+    "cores_energy_powermetrics_component": {
+        "clean_name": "CPU Cores Energy",
+        "source": "powermetrics",
+        "explanation": "Energy of the CPU cores (M-Series) only without GPU, ANE, GPU, DRAM etc."
+    },
+    "cores_carbon_powermetrics_component": {
+        "clean_name": "CPU Cores CO₂ (operational)",
+        "source": "Formula (powermetrics)",
+        "explanation": "Operational CO₂ of the CPU cores (M-Series) only without GPU, ANE, GPU, DRAM etc. calcuated by formula via powermetrics"
+    },
+    "cpu_energy_powermetrics_component": {
+        "clean_name": "CPU Package Energy",
+        "source": "powermetrics",
+        "explanation": "Energy of the CPU Package (Intel) only without GPU, ANE, GPU, DRAM etc."
+    },
+    "cpu_power_powermetrics_component": {
+        "clean_name": "CPU Package Power",
+        "source": "powermetrics",
+        "explanation": "Power of the CPU Package (Intel) only without GPU, ANE, GPU, DRAM etc."
+    },
+    "cpu_carbon_powermetrics_component": {
+        "clean_name": "CPU Package CO₂ (operational)",
+        "source": "Formula (powermetrics)",
+        "explanation": "Operational CO₂ of the CPU Package (Intel) only without GPU, ANE, GPU, DRAM etc. calcuated by formula via powermetrics"
+    },
+    "cpu_time_powermetrics_vm": {
+        "clean_name": "CPU time",
+        "source": "powermetrics",
+        "explanation": "Effective execution time of the CPU for all cores combined"
+    },
+    "disk_io_bytesread_powermetrics_vm": {
+        "clean_name": "Disk I/O (Read)",
+        "source": "powermetrics",
+        "explanation": "Disk I/O - Bytes read per second for SDD/HDD"
+    },
+    "disk_io_byteswritten_powermetrics_vm": {
+        "clean_name": "Disk I/O (Write)",
+        "source": "powermetrics",
+        "explanation": "Disk I/O - Bytes written per second for SDD/HDD"
+    },
+    "energy_impact_powermetrics_vm": {
+        "clean_name": "Energy impact",
+        "source": "powermetrics",
+        "explanation": "macOS proprietary value for relative energy impact on device"
+    },
+    "cpu_utilization_cgroup_container": {
+        "clean_name": "CPU %",
+        "source": "cgroup",
+        "explanation": "CPU Utilization per container via cgroup"
+    },
+    "cpu_utilization_cgroup_system": {
+        "clean_name": "CPU %",
+        "source": "procfs",
+        "explanation": "CPU Utilization for whole system via procfs"
+    },
+    "memory_used_cgroup_container": {
+        "clean_name": "Memory Usage",
+        "source": "cgroup",
+        "explanation": "Memory Usage per container via cgroup"
+    },
+    "memory_used_cgroup_system": {
+        "clean_name": "Memory Usage",
+        "source": "cgroup",
+        "explanation": "Memory Usage per system cgroup"
+    },
+    "memory_used_procfs_system": {
+        "clean_name": "Memory Usage",
+        "source": "procfs",
+        "explanation": "Memory Usage for whole system via procfs"
+    },
+    "network_total_cgroup_container": {
+        "clean_name": "Network Traffic",
+        "source": "cgroup",
+        "explanation": "Network total data traffic for the container via cgroup reporting."
+    },
+    "network_io_cgroup_container": {
+        "clean_name": "Network I/O",
+        "source": "cgroup",
+        "explanation": "Network I/O. Details on https://docs.green-coding.io/docs/measuring/metric-providers/network-io-cgroup-container"
+    },
+    "network_io_procfs_system": {
+        "clean_name": "Network I/O",
+        "source": "procfs",
+        "explanation": "Network I/O for the whole system via procfs"
+    },
+    "network_total_procfs_system": {
+        "clean_name": "Network Traffic",
+        "source": "procfs",
+        "explanation": "Network total data traffic for the whole accumulated from procfs data"
+    },
+    "gpu_energy_nvidia_nvml_component": {
+        "clean_name": "GPU Energy",
+        "source": "NVIDIA NVML",
+        "explanation": "Derived NVIDIA NVML based GPU energy"
+    },
+    "gpu_power_nvidia_nvml_component": {
+        "clean_name": "GPU Power",
+        "source": "NVIDIA NVML",
+        "explanation": "NVIDIA NVML based GPU power"
+    },
+    "gpu_carbon_nvidia_nvml_component": {
+        "clean_name": "GPU CO₂ (operational)",
+        "source": "Formula (NVIDIA NVML)",
+        "explanation": "GPU operational CO₂ calculated by formula via NVIDIA NVML"
+    },
+    "cpu_energy_rapl_msr_component": {
+        "clean_name": "CPU Package Energy",
+        "source": "RAPL",
+        "explanation": "RAPL based CPU energy of package domain"
+    },
+    "cpu_power_rapl_msr_component": {
+        "clean_name": "CPU Package Power",
+        "source": "RAPL",
+        "explanation": "Derived RAPL based CPU energy of package domain"
+    },
+    "cpu_carbon_rapl_msr_component": {
+        "clean_name": "CPU Package CO₂ (operational)",
+        "source": "Formula (RAPL)",
+        "explanation": "Derived RAPL based CPU operational CO₂ via formula of package domain"
+    },
+    "cpu_utilization_procfs_system": {
+        "clean_name": "CPU %",
+        "source": "procfs",
+        "explanation": "CPU Utilization of total system"
+    },
+    "cpu_utilization_mach_system": {
+        "clean_name": "CPU %",
+        "source": "mach",
+        "explanation": "CPU Utilization of total system"
+    },
+    "memory_carbon_rapl_msr_component": {
+        "clean_name": "DRAM CO₂ (operational)",
+        "source": "RAPL",
+        "explanation": "RAPL based memory operational CO₂ of DRAM domain"
+    },
+    "memory_energy_rapl_msr_component": {
+        "clean_name": "DRAM Energy",
+        "source": "RAPL",
+        "explanation": "RAPL based memory energy of DRAM domain"
+    },
+    "memory_power_rapl_msr_component": {
+        "clean_name": "DRAM Power",
+        "source": "RAPL",
+        "explanation": "Derived RAPL based memory energy of DRAM domain"
+    },
+    "psu_carbon_ac_sdia_machine": {
+        "clean_name": "Machine CO₂",
+        "source": "Formula (SDIA)",
+        "explanation": "Machine CO₂ calculated by formula via SDIA estimation"
+    },
+    "psu_energy_ac_sdia_machine": {
+        "clean_name": "Machine Energy",
+        "source": "Formula (SDIA)",
+        "explanation": "Full machine energy (AC) as estimated by SDIA model"
+    },
+    "psu_power_ac_sdia_machine": {
+        "clean_name": "Machine Power",
+        "source": "Formula (SDIA)",
+        "explanation": "Full machine power (AC) as estimated by SDIA model"
+    },
+    "disk_io_read_cgroup_container": {
+        "clean_name": "Disk Reads",
+        "source": "cgroup",
+        "explanation": "Data read from disk per container via cgroup"
+    },
+    "disk_io_write_cgroup_container": {
+        "clean_name": "Disk Writes",
+        "source": "cgroup",
+        "explanation": "Data written to disk per container via cgroup"
+    },
+    "disk_io_read_cgroup_system": {
+        "clean_name": "Disk Reads",
+        "source": "cgroup",
+        "explanation": "Data read from disk for the system via cgroup"
+    },
+    "disk_io_write_cgroup_system": {
+        "clean_name": "Disk Writes",
+        "source": "cgroup",
+        "explanation": "Data written to disk for the system via cgroup"
+    },
+    "disk_total_read_cgroup_container": {
+        "clean_name": "Total Disk Reads",
+        "source": "cgroup",
+        "explanation": "Total data read from disk per container via cgroup"
+    },
+    "disk_total_write_cgroup_container": {
+        "clean_name": "Total Disk Writes",
+        "source": "cgroup",
+        "explanation": "Total data written to disk per container via cgroup"
+    },
+    "disk_total_read_cgroup_system": {
+        "clean_name": "Total System Disk Reads",
+        "source": "cgroup",
+        "explanation": "Total data read from disk for the system via cgroup"
+    },
+    "disk_total_write_cgroup_system": {
+        "clean_name": "Total System Disk Writes",
+        "source": "cgroup",
+        "explanation": "Total data written to disk for the system via cgroup"
+    }
+} // PLEASE DO NOT REMOVE THIS COMMENT -- END METRIC_MAPPINGS
