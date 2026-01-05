@@ -75,4 +75,4 @@ flow:
         shell: bash
       - type: console
         command: |
-          tmux send-keys -t mysession ':q'
+          tmux send-keys -t mysession ':q' Enter
