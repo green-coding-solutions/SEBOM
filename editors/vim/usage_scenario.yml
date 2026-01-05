@@ -1,0 +1,77 @@
+name: VIM Energy Benchmark
+description: VIM with xterm-ubuntu terminal emulator via X11/X11-Wayland-Bridge
+author: Arne Tarara <arne@green-coding.io>
+
+services:
+  xterm-ubuntu:
+    build: .
+    environment:
+      - "DISPLAY=:0"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./config.js:/tmp/config.js:ro
+    command: ['tail', '-f', '/dev/null']
+
+flow:
+  - name: Start xterm and tmux
+    container: xterm-ubuntu
+    hidden: true
+    commands:
+      - type: console
+        command: xterm -geometry 160x45 -e "tmux new-session -A -s mysession" # 160x45 corresponds roughly to 1280x720
+        detach: true
+
+  - name: Start editor empty
+    container: xterm-ubuntu
+    commands:
+      - type: console
+        command: tmux send-keys -t mysession "vim /tmp/newfile" Enter
+
+  - name: Idle empty file
+    container: xterm-ubuntu
+    commands:
+      - type: console
+        command: sleep 10
+
+  - name: Input text
+    container: xterm-ubuntu
+    commands:
+      - type: console
+        # pv gives us a better and more granular control of small timings < 0.1 s here
+        # i is input mode in vim
+        command: |
+          tmux send-keys -t mysession i
+          pv -q -L $((1000/80)) /tmp/config.js | while IFS= read -r -n1 char || [ -n "$char" ]; do
+              if [ -z "$char" ]; then
+                  tmux send-keys -t mysession Enter
+                  continue
+              fi
+              tmux send-keys -t mysession "$char"
+          done
+          tmux send-keys -t mysession Escape ':wq' Enter
+        shell: bash
+
+  - name: Idle open file
+    container: xterm-ubuntu
+    commands:
+      - type: console
+        command: sleep 10
+
+  - name: Open big file scroll end
+    container: xterm-ubuntu
+    commands:
+      - type: console
+        command: |
+          tmux send-keys -t mysession "vim /tmp/config.js" Enter
+          for i in {1..200}; do
+              tmux send-keys -t mysession Down
+              sleep 0.1
+          done
+          for i in {1..30}; do
+              tmux send-keys -t mysession C-f
+              sleep 0.1
+          done
+        shell: bash
+      - type: console
+        command: |
+          tmux send-keys -t mysession ':q'
