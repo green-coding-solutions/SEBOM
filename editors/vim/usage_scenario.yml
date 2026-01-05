@@ -9,7 +9,8 @@ services:
       - "DISPLAY=:0"
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ./config.js:/tmp/config.js:ro
+      - ./../../source_file_100_lines.js:/tmp/source_file_100_lines.js:ro
+      - ./../../source_file_600_lines.js:/tmp/source_file_600_lines.js:ro
     command: ['tail', '-f', '/dev/null']
 
 flow:
@@ -41,7 +42,7 @@ flow:
         # i is input mode in vim
         command: |
           tmux send-keys -t mysession i
-          pv -q -L $((1000/80)) /tmp/config.js | while IFS= read -r -n1 char || [ -n "$char" ]; do
+          pv -q -L $((1000/80)) /tmp/source_file_100_lines.js | while IFS= read -r -n1 char || [ -n "$char" ]; do
               if [ -z "$char" ]; then
                   tmux send-keys -t mysession Enter
                   continue
@@ -62,7 +63,7 @@ flow:
     commands:
       - type: console
         command: |
-          tmux send-keys -t mysession "vim /tmp/config.js" Enter
+          tmux send-keys -t mysession "vim /tmp/source_file_600_lines.js" Enter
           for i in {1..200}; do
               tmux send-keys -t mysession Down
               sleep 0.1
