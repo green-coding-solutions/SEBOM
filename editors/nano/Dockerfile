@@ -6,5 +6,5 @@ FROM ubuntu@sha256:c35e29c9450151419d9448b0fd75374fec4fff364a27f176fb458d472dfc9
 
 RUN apt-get update && \
     apt list xterm && \
-    apt-get install -y --no-install-recommends tmux nano xterm pv && \
+    apt-get install -y --no-install-recommends --no-install-suggests tmux nano xterm pv && \
     rm -rf /var/lib/apt/lists/*
