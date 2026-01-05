@@ -9,8 +9,8 @@ services:
       - "DISPLAY=:0"
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ./../../source_file_100_lines.js:/tmp/source_file_100_lines.js:ro
-      - ./../../source_file_600_lines.js:/tmp/source_file_600_lines.js:ro
+      - ./../../SHARED/source_file_100_lines.js:/tmp/source_file_100_lines.js:ro
+      - ./../../SHARED/source_file_600_lines.js:/tmp/source_file_600_lines.js:ro
     command: ['tail', '-f', '/dev/null']
 
 flow:
