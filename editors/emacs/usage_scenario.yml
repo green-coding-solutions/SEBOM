@@ -62,7 +62,7 @@ flow:
     commands:
       - type: console
         command: |
-          tmux send-keys -t mysession "emacs /tmp/source_file_600_lines.js" Enter
+          tmux send-keys -t mysession "emacs -nw /tmp/source_file_600_lines.js" Enter
           for i in {1..200}; do
               tmux send-keys -t mysession Down
               sleep 0.1
