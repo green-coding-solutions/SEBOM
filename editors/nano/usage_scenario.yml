@@ -4,16 +4,12 @@ author: Arne Tarara <arne@green-coding.io>
 
 services:
   xterm-ubuntu:
-#    image: ubuntu@sha256:955364933d0d91afa6e10fb045948c16d2b191114aa54bed3ab5430d8bbc58cc # 24.04 as of 04.01.2026
     build: .
     environment:
       - "DISPLAY=:0"
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ./config.js:/tmp/config.js:ro
-#    setup-commands:
-#      - command: apt update
-#      - command: apt install -y xterm
     command: ['tail', '-f', '/dev/null']
 
 flow:
@@ -25,29 +21,55 @@ flow:
         command: xterm -geometry 160x45 -e "tmux new-session -A -s mysession" # 160x45 corresponds roughly to 1280x720
         detach: true
 
-  - name: Start nano empty
+  - name: Start editor empty
     container: xterm-ubuntu
     commands:
       - type: console
-        command: tmux send-keys -t mysession "nano" Enter
+        command: tmux send-keys -t mysession "nano /tmp/newfile" Enter
 
-  - name: Idle for 10 seconds with empty file
+  - name: Idle empty file
     container: xterm-ubuntu
     commands:
       - type: console
-        command: sleep 1000000
+        command: sleep 10
 
-  - name: Input a whole source code file
+  - name: Input text
+    container: xterm-ubuntu
+    commands:
+      - type: console
+        # pv gives us a better and more granular control of small timings < 0.1 s here
+        command: |
+          pv -q -L $((1000/80)) /tmp/config.js | while IFS= read -r -n1 char || [ -n "$char" ]; do
+              if [ -z "$char" ]; then
+                  tmux send-keys -t mysession Enter
+                  continue
+              fi
+              tmux send-keys -t mysession "$char"
+          done
+          tmux send-keys -t mysession C-x y Enter
+        shell: bash
+
+  - name: Idle open file
+    container: xterm-ubuntu
+    commands:
+      - type: console
+        command: sleep 10
+
+  - name: Open big file scroll end
     container: xterm-ubuntu
     commands:
       - type: console
         command: |
-          pv -q -L $((1000/80)) /tmp/config.js | while IFS= read -r -n1 char; do
-            case "$char" in
-              $'\n') char="Enter" ;;
-              $'\t') char="Tab" ;;
-              $'\b') char="Backspace" ;;
-            esac
-            tmux send-keys -t mysession "$char"
+          tmux send-keys -t mysession "nano /tmp/config.js" Enter
+          for i in {1..200}; do
+              tmux send-keys -t mysession Down
+              sleep 0.1
+          done
+          for i in {1..30}; do
+              tmux send-keys -t mysession C-v
+              sleep 0.1
           done
         shell: bash
+      - type: console
+        command: |
+          tmux send-keys -t mysession C-x
