@@ -4,6 +4,5 @@ FROM debian:trixie-slim
 # via container dependency inspection of the GMT
 
 RUN apt-get update && \
-    apt list xterm && \
     apt-get install -y --no-install-recommends --no-install-suggests tmux nano xterm pv && \
     rm -rf /var/lib/apt/lists/*
