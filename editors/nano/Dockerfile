@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 # No need to pin versions here for tmux, nano, xterm and pv as we have that
 # via container dependency inspection of the GMT
