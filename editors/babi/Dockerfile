@@ -4,7 +4,7 @@ FROM python:3.14.2-slim-trixie
 # via container dependency inspection of the GMT
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends --no-install-suggests tmux gcc xterm pv libonig-dev && \
+    apt-get install -y --no-install-recommends --no-install-suggests tmux gcc build-essential xterm pv libonig-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install babi
