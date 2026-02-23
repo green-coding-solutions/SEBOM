@@ -1,0 +1,92 @@
+---
+name: chrome
+author: Didi Hoffmann
+description: This is the green code label benchmark script
+
+
+label:
+  - open_source: true
+  - no_advertisement: true
+  - free_updates: true
+  - documentation_link: http://docs.green-coding.io
+  - website_link: http://www.green-coding.io
+  - sub_packages:
+  - file_formats:
+    - text/pdf
+  - accessibility: true
+  - architectures:
+    - x86
+    - arm64
+
+
+services:
+  bench-service:
+    image: ubuntu:24.04
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      DISPLAY: ":0"
+    docker-run-args:
+      - --shm-size=4gb
+      - --security-opt seccomp=unconfined
+    setup-commands:
+      - echo "tzdata tzdata/Areas select Europe" | debconf-set-selections
+      - echo "tzdata tzdata/Zones/Europe select Berlin" | debconf-set-selections
+      - echo 'Acquire::http::Proxy "http://192.168.1.17:3142";' >> /etc/apt/apt.conf.d/01proxy
+      - echo 'Acquire::HTTPS::Proxy "false";' >> /etc/apt/apt.conf.d/01proxy
+      - apt update
+      - apt install -y xxd
+      - apt install -y wget
+      - apt install -y gnupg
+      - 'head -c 16 /dev/urandom | xxd -p > /etc/machine-id'
+      - install -d -m 0755 /etc/apt/keyrings
+      - wget -qO- "http://download.opensuse.org/repositories/home:/stevenpusser/xUbuntu_22.04/Release.key" | gpg --dearmor > /usr/share/keyrings/palemoon.gpg
+      - echo 'deb [signed-by=//usr/share/keyrings/palemoon.gpg] http://download.opensuse.org/repositories/home:/stevenpusser/xUbuntu_22.04/ /' > /etc/apt/sources.list.d/palemoon.list
+      - apt update
+
+    networks:
+      - benchmark
+    shell: /bin/bash
+
+
+  speedometer:
+    build: .
+    container_name: speedometer
+    ports:
+      - "8080:8080"
+    networks:
+      - benchmark
+
+flow:
+  - name: install
+    container: bench-service
+    commands:
+      - type: console
+        command: apt-get install -y palemoon
+
+
+  - name: idle
+    container: bench-service
+    commands:
+      - type: console
+        command: timeout -s SIGKILL 60 firefox -setDefaultBrowser
+        ignore-errors: True
+
+
+  - name: run
+    container: bench-service
+    commands:
+      - type: console
+        command: timeout -s SIGKILL 60 firefox -setDefaultBrowser http://speedometer:8080?startAutomatically=true
+        ignore-errors: True
+
+
+  - name: uninstall
+    container: bench-service
+    commands:
+      - type: console
+        command: apt purge --auto-remove -y firefox
+
+networks:
+  benchmark:
+

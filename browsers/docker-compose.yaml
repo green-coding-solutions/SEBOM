@@ -1,0 +1,6 @@
+services:
+  speedometer:
+    build: .
+    container_name: speedometer
+    ports:
+      - "8080:8080"

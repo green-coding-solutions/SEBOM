@@ -1,0 +1,112 @@
+---
+name: chrome
+author: Didi Hoffmann
+description: This is the green code label benchmark script
+
+ignore-unsupported-compose: true
+
+label:
+  - open_source: false
+  - no_advertisement: true
+  - free_updates: true
+  - documentation_link: http://docs.green-coding.io
+  - website_link: http://www.green-coding.io
+  - sub_packages:
+  - file_formats:
+    - text/pdf
+  - accessibility: true
+  - architectures:
+    - x86
+    - arm64
+
+services:
+  bench-service:
+    image: ubuntu:24.04
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      DISPLAY: ":0"
+    docker-run-args:
+      - --shm-size=4gb
+    setup-commands:
+      - command: echo "tzdata tzdata/Areas select Europe" | debconf-set-selections
+        shell: /bin/bash
+      - command: echo "tzdata tzdata/Zones/Europe select Berlin" | debconf-set-selections
+        shell: /bin/bash
+      - command: echo 'Acquire::http::Proxy "http://192.168.1.243:3142";' >> /etc/apt/apt.conf.d/01proxy
+        shell: /bin/bash
+      - command: echo 'Acquire::HTTPS::Proxy "false";' >> /etc/apt/apt.conf.d/01proxy
+        shell: /bin/bash
+      - command: apt update
+      - command: apt install -y xxd
+      - command: apt install -y dbus dbus-x11
+      - command: apt install -y software-properties-common
+      - command: mkdir -p /run/dbus
+      - command: dbus-daemon --system --fork
+      - command: head -c 16 /dev/urandom | xxd -p > /etc/machine-id
+        shell: /bin/bash
+      - command: add-apt-repository ppa:xtradeb/apps -y
+      - command: apt update
+    networks:
+      - benchmark
+
+  speedometer:
+    build: .
+    container_name: speedometer
+    ports:
+      - "8080:8080"
+    networks:
+      - benchmark
+
+flow:
+  - name: install
+    container: bench-service
+    commands:
+      - type: console
+        command: apt install -y chromium
+
+
+  - name: sleep
+    container: bench-service
+    commands:
+      - type: console
+        command: sleep 10
+
+
+  - name: idle
+    container: bench-service
+    commands:
+      - type: console
+        command: timeout -s SIGKILL 60 chromium --no-sandbox --disable-gpu --no-first-run --no-default-browser-check --disable-syn
+        ignore-errors: True
+
+  - name: sleep1
+    container: bench-service
+    commands:
+      - type: console
+        command: sleep 10
+
+
+  - name: run
+    container: bench-service
+    commands:
+      - type: console
+        command: timeout -s SIGKILL 120 chromium --no-sandbox --disable-gpu --no-first-run --no-default-browser-check --disable-syn http://speedometer:8080?startAutomatically=true
+        ignore-errors: True
+
+  - name: sleep2
+    container: bench-service
+    commands:
+      - type: console
+        command: sleep 10
+
+
+  - name: uninstall
+    container: bench-service
+    commands:
+      - type: console
+        command: apt purge --auto-remove -y chromium
+
+networks:
+  benchmark:
+

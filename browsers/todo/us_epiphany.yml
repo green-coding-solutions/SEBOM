@@ -1,0 +1,100 @@
+---
+name: chrome
+author: Didi Hoffmann
+description: This is the green code label benchmark script
+
+ignore-unsupported-compose: true
+
+label:
+  - open_source: false
+  - no_advertisement: true
+  - free_updates: true
+  - documentation_link: http://docs.green-coding.io
+  - website_link: http://www.green-coding.io
+  - sub_packages:
+  - file_formats:
+    - text/pdf
+  - accessibility: true
+  - architectures:
+    - x86
+    - arm64
+
+
+services:
+  bench-service:
+    image: ubuntu:24.04
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      DISPLAY: ":0"
+      LIBGL_ALWAYS_SOFTWARE: 1
+    docker-run-args:
+      - --shm-size=4gb
+      - --privileged
+    setup-commands:
+      - command: echo "tzdata tzdata/Areas select Europe" | debconf-set-selections
+        shell: /bin/bash
+      - command: echo "tzdata tzdata/Zones/Europe select Berlin" | debconf-set-selections
+        shell: /bin/bash
+      - command: echo 'Acquire::http::Proxy "http://192.168.178.43:3142";' >> /etc/apt/apt.conf.d/01proxy
+        shell: /bin/bash
+      - command: echo 'Acquire::HTTPS::Proxy "false";' >> /etc/apt/apt.conf.d/01proxy
+        shell: /bin/bash
+      - command: apt update
+      - command: apt install -y xxd
+      - command: apt install -y wget
+      - command: apt install -y gnupg
+      - command: apt install -y dbus dbus-x11
+      - command: mkdir -p /run/dbus
+      - command: dbus-daemon --system --fork
+      - command: head -c 16 /dev/urandom | xxd -p > /etc/machine-id
+        shell: /bin/bash
+    networks:
+      - benchmark
+
+
+
+  speedometer:
+    build: .
+    container_name: speedometer
+    ports:
+      - "8080:8080"
+    networks:
+      - benchmark
+
+flow:
+  - name: install
+    container: bench-service
+    commands:
+      - type: console
+        command: apt install -y epiphany-browser
+
+
+
+  - name: idle
+    container: bench-service
+    commands:
+      - type: console
+        command: timeout -s SIGKILL 60 epiphany
+        ignore-errors: True
+
+
+
+  - name: run
+    container: bench-service
+    commands:
+      - type: console
+        command: timeout -s SIGKILL 120 epiphany http://speedometer:8080?startAutomatically=true
+        ignore-errors: True
+
+
+
+  - name: uninstall
+    container: bench-service
+    commands:
+      - type: console
+        command: apt purge --auto-remove -y epiphany
+
+networks:
+  benchmark:
+
