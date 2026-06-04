@@ -1,0 +1,78 @@
+---
+name: Benchmark VM
+author: Arne Tarara
+description: Modular Benchmark script in VM
+
+services:
+  benchmark-container:
+    image: greencoding/benchmark:latest
+    entrypoint: ["sleep", "infinity"]
+    docker-run-args:
+      - --runtime io.containerd.kata.v2
+    # Internally kata reserves an extra core. WE need to keep that in mind that the total does not exhaust the host
+    # reservation. Thus this limit is designed for the M4 with > 4 cores
+    cpus: 3
+    # kata reserves an extra 2G by default. WE need to keep that in mind that the total does not exhaust the host
+    # reservation. Thus this limit is designed for the M4 with plenty of memory on the machine (> 60 GB)
+    mem_limit: 8G
+    networks:
+      - bridge
+
+flow:
+
+  - name: Kata Container Limits Validation
+    container: benchmark-container
+    hidden: True
+    commands:
+      - type: console
+        command: |
+          [ "$(nproc)" -eq 4 ] || exit -1
+        shell: bash
+        note: Checking if exactly 4 cores are mapped into the VM
+      - type: console
+        command: |
+         [ "$(lsmem -b -n -o SIZE | awk '{s+=$1} END {printf "%.0fG", s/1024/1024/1024}')" = "10G" ]
+        shell: bash
+        note: Checking if exactly 10 GB are mapped into the VM
+
+  - name: CPU
+    container: benchmark-container
+    commands:
+        - type: console
+          command: bash benchmark.sh --cpu --cpu-workers 3
+
+  - name: Memory
+    container: benchmark-container
+    commands:
+        - type: console
+          command: bash benchmark.sh --memory
+
+  - name: Disk
+    container: benchmark-container
+    commands:
+        - type: console
+          command: bash benchmark.sh --disk
+
+  - name: Network
+    container: benchmark-container
+    commands:
+        - type: console
+          command: bash benchmark.sh --network
+
+  - name: Idle
+    container: benchmark-container
+    commands:
+        - type: console
+          command: bash benchmark.sh --idle
+
+  - name: Wakeups
+    container: benchmark-container
+    commands:
+        - type: console
+          command: bash benchmark.sh --wakeups
+
+  - name: Syscall
+    container: benchmark-container
+    commands:
+        - type: console
+          command: bash benchmark.sh --syscall
