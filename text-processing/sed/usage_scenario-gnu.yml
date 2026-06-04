@@ -1,0 +1,68 @@
+---
+name: sed Benchmark - GNU sed (C)
+author: arne@green-coding.io
+description: Measures energy cost of sed text substitution using GNU sed (C implementation) on the enwik8 benchmark corpus
+
+custom_metrics:
+  processed_mb:
+    unit: MB
+    sci: True
+
+services:
+  fedora:
+    image: fedora:44
+    setup-commands:
+      - command: dnf install -y curl unzip
+
+flow:
+  - name: Prepare
+    container: fedora
+    commands:
+      - type: console
+        command: curl -sS -o /tmp/enwik8.zip https://mattmahoney.net/dc/enwik8.zip
+        note: Download enwik8 standard 100MB text benchmark corpus (36MB zip)
+      - type: console
+        command: unzip /tmp/enwik8.zip -d /tmp/
+        note: Extract 100MB Wikipedia XML text file
+      - type: console
+        command: dd if=/tmp/enwik8 bs=1048576 count=1 of=/tmp/enwik8_1mb
+        note: Create exact 1MB slice for small file test
+      - type: console
+        command: dd if=/tmp/enwik8 bs=1048576 count=10 of=/tmp/enwik8_10mb
+        note: Create exact 10MB slice for medium file test
+
+  - name: Substitute 1 MB
+    container: fedora
+    commands:
+      - type: console
+        command: sed 's/the /THE /g' /tmp/enwik8_1mb > /dev/null
+        shell: bash
+        note: Replace all occurrences of 'the ' with 'THE ' in 1MB file
+      - type: console
+        command: echo "$(date +%s%N) processed_mb=1"
+        shell: bash
+        note: Emit SCI metric for 1MB processing
+
+  - name: Substitute 10 MB
+    container: fedora
+    commands:
+      - type: console
+        command: sed 's/the /THE /g' /tmp/enwik8_10mb > /dev/null
+        shell: bash
+        note: Replace all occurrences of 'the ' with 'THE ' in 10MB file
+      - type: console
+        command: echo "$(date +%s%N) processed_mb=10"
+        shell: bash
+        note: Emit SCI metric for 10MB processing
+
+  - name: Substitute 100 MB
+    container: fedora
+    commands:
+      - type: console
+        command: sed 's/the /THE /g' /tmp/enwik8 > /dev/null
+        shell: bash
+        note: Replace all occurrences of 'the ' with 'THE ' in 100MB file
+      - type: console
+        command: echo "$(date +%s%N) processed_mb=100"
+        shell: bash
+        note: Emit SCI metric for 100MB processing
