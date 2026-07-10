@@ -14,7 +14,7 @@ services:
     volumes:
       - ../../sed:/tmp/dspinellis-src:ro
     setup-commands:
-      - command: apt-get update && apt-get install -y curl unzip
+      - command: apt-get update && apt-get install -y curl
       - command: cargo build --release --manifest-path /tmp/dspinellis-src/Cargo.toml --target-dir /tmp/dspinellis-build
 
 flow:
@@ -22,10 +22,10 @@ flow:
     container: rust
     commands:
       - type: console
-        command: curl -sS -o /tmp/enwik8.zip https://mattmahoney.net/dc/enwik8.zip
+        command: curl -sS -o /tmp/enwik8.gz http://download.green-coding.io:8080/enwik8.gz
         note: Download enwik8 standard 100MB text benchmark corpus (36MB zip)
       - type: console
-        command: unzip /tmp/enwik8.zip -d /tmp/
+        command: gunzip /tmp/enwik8.gz -d /tmp/
         note: Extract 100MB Wikipedia XML text file
       - type: console
         command: dd if=/tmp/enwik8 bs=1048576 count=1 of=/tmp/enwik8_1mb

@@ -21,7 +21,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: curl -s -o /tmp/myfile http://192.168.178.21:6000/1MB.bin
+        command: curl -s -o /tmp/myfile http://download.green-coding.io:8080/1MB.bin
         note: Download 1 MB file with curl
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=1"
@@ -41,7 +41,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: curl -s -o /tmp/myfile http://192.168.178.21:6000/10MB.bin
+        command: curl -s -o /tmp/myfile http://download.green-coding.io:8080/10MB.bin
         note: Download 10 MB file with curl
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=10"
@@ -61,7 +61,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: curl -s -o /tmp/myfile http://192.168.178.21:6000/100MB.bin
+        command: curl -s -o /tmp/myfile http://download.green-coding.io:8080/100MB.bin
         note: Download 100 MB file with curl
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=100"
@@ -81,7 +81,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: curl -s -o /tmp/myfile http://192.168.178.21:6000/1000MB.bin
+        command: curl -s -o /tmp/myfile http://download.green-coding.io:8080/1000MB.bin
         note: Download 1000 MB file with curl
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=1000"

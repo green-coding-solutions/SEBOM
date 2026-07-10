@@ -21,7 +21,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: wget -q -O /tmp/myfile http://192.168.178.21:6000/1MB.bin
+        command: wget -q -O /tmp/myfile http://download.green-coding.io:8080/1MB.bin
         note: Download 1MB file with wget
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=1"
@@ -41,7 +41,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: wget -q -O /tmp/myfile http://192.168.178.21:6000/10MB.bin
+        command: wget -q -O /tmp/myfile http://download.green-coding.io:8080/10MB.bin
         note: Download 10MB file with wget
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=10"
@@ -61,7 +61,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: wget -q -O /tmp/myfile http://192.168.178.21:6000/100MB.bin
+        command: wget -q -O /tmp/myfile http://download.green-coding.io:8080/100MB.bin
         note: Download 100MB file with wget
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=100"
@@ -81,7 +81,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: wget -q -O /tmp/myfile http://192.168.178.21:6000/1000MB.bin
+        command: wget -q -O /tmp/myfile http://download.green-coding.io:8080/1000MB.bin
         note: Download 1000 MB file with wget
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=1000"

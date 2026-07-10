@@ -22,7 +22,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: python3 /tmp/repo/download/download.py http://192.168.178.21:6000/1MB.bin
+        command: python3 /tmp/repo/download/download.py http://download.green-coding.io:8080/1MB.bin
         note: Download 1MB file with Python requests (streaming, saved to /tmp/myfile)
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=1"
@@ -42,7 +42,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: python3 /tmp/repo/download/download.py http://192.168.178.21:6000/10MB.bin
+        command: python3 /tmp/repo/download/download.py http://download.green-coding.io:8080/10MB.bin
         note: Download 10MB file with Python requests (streaming, saved to /tmp/myfile)
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=10"
@@ -62,7 +62,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: python3 /tmp/repo/download/download.py http://192.168.178.21:6000/100MB.bin
+        command: python3 /tmp/repo/download/download.py http://download.green-coding.io:8080/100MB.bin
         note: Download 100MB file with Python requests (streaming, saved to /tmp/myfile)
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=100"
@@ -82,7 +82,7 @@ flow:
     container: downloader
     commands:
       - type: console
-        command: python3 /tmp/repo/download/download.py http://192.168.178.21:6000/1000MB.bin
+        command: python3 /tmp/repo/download/download.py http://download.green-coding.io:8080/1000MB.bin
         note: Download 1000MB file with Python requests (streaming, saved to /tmp/myfile)
       - type: console
         command: echo "$(date +%s%N) downloaded_mb=1000"

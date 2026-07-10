@@ -1,6 +1,7 @@
 ## Running these scenarios
 
-The scenarios expects downloadable files to be available at http://192.168.178.21:6000/*.bin
+The scenarios expects downloadable files to be available at http://download.green-coding.io:8080/*.bin -
+See https://github.com/green-coding-solutions/download.green-coding.io for details how to set this up.
 
 This URL is natively available if you run the scenario in the [GMT Cluster](https://metrics.green-coding.io/cluster-status.html).
 
