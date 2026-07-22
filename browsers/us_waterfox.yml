@@ -61,20 +61,12 @@ services:
       - benchmark
 
 
-  download:
-    image: httpd:latest
-    volumes:
-      - ./downloads:/usr/local/apache2/htdocs:ro
-    networks:
-      - benchmark
-
-
 flow:
   - name: install
     container: bench-service
     commands:
       - type: console
-        command: /bin/sh -c 'wget http://download/waterfox-6.5.7.tar.bz2  && apt install -y bzip2 libgtk-3-0 libasound2t64 libx11-xcb1 && tar xjf waterfox-*.tar.bz2'
+        command: /bin/sh -c 'wget http://download.green-coding.io:8080/waterfox-6.5.7.tar.bz2  && apt install -y bzip2 libgtk-3-0 libasound2t64 libx11-xcb1 && tar xjf waterfox-*.tar.bz2'
 
 
 
